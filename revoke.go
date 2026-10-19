@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 
@@ -112,15 +113,19 @@ func removeRecipients(recipients []recipient) (int, []error) {
 	var failures []error
 
 	for _, item := range recipients {
-		secretFilename := item.stub + ExtAgeSecret
-
-		if err := removeIfPresent(secretFilename); err != nil {
-			failures = append(failures, fmt.Errorf("removing encrypted recipient copy %s: %w", secretFilename, err))
+		// An encrypted collection is the registration of its recipient, so
+		// removing it is the revocation. A registration file an earlier layout
+		// left behind goes with it.
+		if err := removeIfPresent(item.filename); err != nil {
+			failures = append(failures, fmt.Errorf("removing encrypted recipient copy %s: %w", item.filename, err))
 			fmt.Fprintf(os.Stderr, "Unable to remove encrypted copy for %s: %v\n", item.text, err)
+
+			continue
 		}
 
-		if err := removeIfPresent(item.filename); err != nil {
-			failures = append(failures, fmt.Errorf("removing recipient registration %s: %w", item.filename, err))
+		stale := strings.TrimSuffix(item.filename, ExtAgeSecret) + ExtAgePubKey
+		if err := removeIfPresent(stale); err != nil {
+			failures = append(failures, fmt.Errorf("removing recipient registration %s: %w", stale, err))
 			fmt.Fprintf(os.Stderr, "Unable to remove registration for %s: %v\n", item.text, err)
 
 			continue

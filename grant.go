@@ -71,13 +71,6 @@ func grantAction(_ context.Context, cmd *cli.Command) error {
 			continue
 		}
 
-		if err := saveAgePubkeyToKX(item.key); err != nil {
-			failures = append(failures, fmt.Errorf("saving recipient %s: %w", item.text, err))
-			fmt.Fprintf(os.Stderr, "Unable to register recipient %s: %v\n", item.text, err)
-
-			continue
-		}
-
 		saved++
 	}
 

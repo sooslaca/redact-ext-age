@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -24,10 +23,11 @@ type recipient struct {
 	stub     string
 }
 
-// readRecipients enumerates age recipient registrations in the Key Exchange
-// directory. A missing directory holds no registrations and is not an error.
-// Per-file problems are collected so one damaged registration does not hide
-// the healthy ones.
+// readRecipients enumerates the age registrations in the Key Exchange
+// directory: an encrypted collection is itself the registration of the
+// recipient its filename holds. A missing directory holds no registrations and
+// is not an error. Per-file problems are collected so one damaged name does not
+// hide the healthy ones.
 func readRecipients() ([]recipient, []error) {
 	entries, err := os.ReadDir(KeyExchangeDir)
 	if err != nil {
@@ -44,45 +44,36 @@ func readRecipients() ([]recipient, []error) {
 	var failures []error
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ExtAgePubKey) {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ExtAgeSecret) {
 			continue
 		}
 
 		filename := filepath.Join(KeyExchangeDir, entry.Name())
 
-		data, err := os.ReadFile(filename)
+		// The name of an encrypted collection is the recipient it grants access
+		// to, so a stray file with the extension is reported instead of taken
+		// for a registration.
+		stub := strings.TrimSuffix(entry.Name(), ExtAgeSecret)
+
+		key, err := ageutil.ParseRecipient(stub)
 		if err != nil {
-			failures = append(failures, fmt.Errorf("opening recipient registration %s: %w", filename, err))
+			failures = append(failures, fmt.Errorf("recipient named by %s: %w", filename, err))
 
 			continue
 		}
 
-		parsed, err := age.ParseRecipients(bytes.NewReader(data))
+		text, err := ageutil.RecipientText(key)
 		if err != nil {
-			failures = append(failures, fmt.Errorf("loading recipient registration %s: %w", filename, err))
+			failures = append(failures, fmt.Errorf("identifying recipient of %s: %w", filename, err))
 
 			continue
 		}
 
-		if len(parsed) != 1 {
-			failures = append(failures, fmt.Errorf("recipient registration %s contains %d recipients", filename, len(parsed)))
-
-			continue
-		}
-
-		text, err := ageutil.RecipientText(parsed[0])
-		if err != nil {
-			failures = append(failures, fmt.Errorf("identifying recipient registration %s: %w", filename, err))
-
-			continue
-		}
-
-		stub := strings.TrimSuffix(filename, ExtAgePubKey)
 		recipients = append(recipients, recipient{
-			key:      parsed[0],
+			key:      key,
 			text:     text,
 			filename: filename,
-			stub:     stub,
+			stub:     strings.TrimSuffix(filename, ExtAgeSecret),
 		})
 	}
 

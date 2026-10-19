@@ -18,4 +18,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   another identities file or another redact extension still unlocks the
   repository.
 
+### Changed
+
+- An age recipient is registered by the name of its encrypted collection alone:
+  a grant writes `.redact/<recipient>.agekey`, and no longer the
+  `.redact/<recipient>.agepub` registration file beside it, so granting three
+  recipients adds three files instead of six. `list`, `update` and `revoke` read
+  the recipient set from the names of the encrypted collections, and a file that
+  carries the extension with a name that is not an age recipient is reported
+  instead of taken for a registration. A repository granted by an earlier
+  version needs no migration: revoking a recipient removes the registration
+  file that version left behind.
+
 [Unreleased]: https://github.com/sooslaca/redact-ext-age

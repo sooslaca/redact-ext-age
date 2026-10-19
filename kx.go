@@ -37,12 +37,6 @@ const (
 	GitAttributesEntry = "*" + ExtAgeSecret + " binary"
 )
 
-// ExchangeAgePubKeyFile returns the Key Exchange filename holding the
-// registration of an age recipient public key.
-func ExchangeAgePubKeyFile(stub string) string {
-	return stub + ExtAgePubKey
-}
-
 // ExchangeAgeSecretKeyFile returns the Key Exchange filename holding the Key
 // Exchange collection age-encrypted for one recipient.
 func ExchangeAgeSecretKeyFile(stub string) string {
@@ -139,22 +133,6 @@ func saveAgeKeyToKX(recipient age.Recipient, collection []byte) error {
 	}
 
 	return writeExchangeFile(ExchangeAgeSecretKeyFile(kxstub), cyphertext.Bytes())
-}
-
-// saveAgePubkeyToKX registers an age recipient in the Key Exchange folder, so
-// that other users can encrypt the Key Exchange collection for it.
-func saveAgePubkeyToKX(recipient age.Recipient) error {
-	text, err := ageutil.RecipientText(recipient)
-	if err != nil {
-		return fmt.Errorf("identifying recipient: %w", err)
-	}
-
-	kxstub, err := exchangePath(text)
-	if err != nil {
-		return err
-	}
-
-	return writeExchangeFile(ExchangeAgePubKeyFile(kxstub), []byte(text+"\n"))
 }
 
 // writeExchangeFile writes a Key Exchange file through a temporary file in the

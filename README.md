@@ -27,7 +27,7 @@ Usage:
 - commit and push the changes, so that the other users get them
 - unlock the repository: `redact unlock --ext age --option agekey=age1...`
 
-The extension keeps the age-encrypted Key Exchange collections and the recipient registrations in the Key Exchange folder of the repository, as `.redact/<recipient>.agekey` and `.redact/<recipient>.agepub`. It maintains the `*.agekey binary` entry of `.redact/.gitattributes` itself, so that git never converts the ciphertext.
+The extension keeps the age-encrypted Key Exchange collections in the Key Exchange folder of the repository, as `.redact/<recipient>.agekey`. The name of such a file is the recipient its ciphertext grants access to, so the file is at once the collection and the registration of that recipient: granting writes the file, revoking removes it. It maintains the `*.agekey binary` entry of `.redact/.gitattributes` itself, so that git never converts the ciphertext.
 
 The extension never uses the in-tree Key Exchange key: when no local age identity can unlock the collection, it reports that it is not applicable, and redact moves on to the other configured extensions.
 
