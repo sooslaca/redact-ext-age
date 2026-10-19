@@ -16,16 +16,7 @@ import (
 
 //nolint:gocognit,gocyclo // Keeps the isolated end-to-end collection lifecycle together.
 func TestAgeKeyExchangeLifecycle(t *testing.T) {
-	root := t.TempDir()
-
-	if out, err := exec.Command("git", "init", "-q", root).CombinedOutput(); err != nil {
-		t.Fatalf("git init: %v: %s", err, out)
-	}
-
-	t.Chdir(root)
-
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	root := initRepo(t)
 
 	identity1, err := age.GenerateX25519Identity()
 	if err != nil {
@@ -49,16 +40,8 @@ func TestAgeKeyExchangeLifecycle(t *testing.T) {
 		t.Fatalf("writing recipients file: %v", err)
 	}
 
-	// redact hands over the Key Exchange collection as an opaque payload: this
-	// extension encrypts and decrypts it without parsing it. The payload below
-	// has the shape of redact's armored collection, so the round trip stays
-	// byte-exact without depending on redact's API.
-	collection := []byte(`-----BEGIN REDACT KEY EXCHANGE-----
-
-dGVzdCBtYXRlcmlhbDogdGhlIGNvbGxlY3Rpb24gaXMgb3BhcXVlIHRvIHRoaXMgZXh0ZW5zaW9u
-
------END REDACT KEY EXCHANGE-----
-`)
+	// The payload redact hands over, shared with the passphrase tests.
+	collection := testCollection
 
 	// grant accepts one recipient= and one file= entry and encrypts the
 	// collection for both.
@@ -199,6 +182,39 @@ dGVzdCBtYXRlcmlhbDogdGhlIGNvbGxlY3Rpb24gaXMgb3BhcXVlIHRvIHRoaXMgZXh0ZW5zaW9u
 	if stdout != "" {
 		t.Errorf("get after revoke printed a collection: %s", stdout)
 	}
+}
+
+// testCollection is what redact hands over as the Key Exchange collection: an
+// opaque payload this extension encrypts and decrypts without parsing. It has
+// the shape of redact's armored collection, so a round trip stays byte-exact
+// without depending on redact's API.
+var testCollection = []byte(`-----BEGIN REDACT KEY EXCHANGE-----
+
+dGVzdCBtYXRlcmlhbDogdGhlIGNvbGxlY3Rpb24gaXMgb3BhcXVlIHRvIHRoaXMgZXh0ZW5zaW9u
+
+-----END REDACT KEY EXCHANGE-----
+`)
+
+// initRepo puts a git repository in place for one test and makes it the current
+// directory, so that the extension works on it as it would on a clone of a
+// project that uses redact. The repository configuration of whoever runs the
+// test is kept out of it.
+func initRepo(t *testing.T) string {
+	t.Helper()
+
+	root := t.TempDir()
+
+	out, err := exec.Command("git", "init", "-q", root).CombinedOutput()
+	if err != nil {
+		t.Fatalf("git init: %v: %s", err, out)
+	}
+
+	t.Chdir(root)
+
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+	return root
 }
 
 // assertNoAgeFiles fails when a recipient registration or its encrypted copy
