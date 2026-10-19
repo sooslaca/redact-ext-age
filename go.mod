@@ -5,6 +5,7 @@ go 1.27
 require (
 	filippo.io/age v1.3.2
 	github.com/urfave/cli/v3 v3.14.0
+	golang.org/x/term v0.47.0
 )
 
 require (

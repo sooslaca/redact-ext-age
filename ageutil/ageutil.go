@@ -1,10 +1,13 @@
 // Package ageutil wraps the filippo.io/age library with the small set of
 // helpers the age Key Exchange extension needs: stream encryption and
 // decryption, parsing of single recipient and identity strings, reading of
-// identities and recipients files, and discovery of local identities.
+// identities and recipients files, including the passphrase-protected identity
+// files that hold their keys as age ciphertext, and discovery of local
+// identities.
 package ageutil
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -81,11 +84,15 @@ func ParseIdentity(text string) (age.Identity, error) {
 	}
 }
 
-// ParseIdentitiesFile reads an age identities file. A missing file yields no
-// identities and no error, so discovery against an unconfigured host is not a
-// failure. A file holding only comments and blank lines likewise yields no
-// identities.
-func ParseIdentitiesFile(filename string) ([]age.Identity, error) {
+// ParseIdentitiesFile reads an age identities file: either the plain list of
+// private keys that age-keygen writes, or the age ciphertext that holds one
+// when the key is protected with a passphrase. passphrase is asked for that
+// passphrase; it may be nil when there is nobody to ask, in which case an
+// encrypted file reports ErrPassphraseUnavailable instead of identities. A
+// missing file yields no identities and no error, so discovery against an
+// unconfigured host is not a failure. A file holding only comments and blank
+// lines likewise yields no identities.
+func ParseIdentitiesFile(filename string, passphrase PassphraseFunc) ([]age.Identity, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -96,18 +103,7 @@ func ParseIdentitiesFile(filename string) ([]age.Identity, error) {
 	}
 	defer file.Close()
 
-	identities, err := age.ParseIdentities(file)
-	if err != nil {
-		// age reports this when the file holds no usable identity; treat it as
-		// an empty set rather than an error.
-		if err.Error() == "no identities found" {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("reading age identities file: %w", err)
-	}
-
-	return identities, nil
+	return readIdentities(filename, bufio.NewReader(file), passphrase)
 }
 
 // ParseRecipientsFile reads an age recipients file. A file holding no usable

@@ -32,7 +32,7 @@ func getAction(_ context.Context, cmd *cli.Command) error {
 
 	selector := settings.identity()
 
-	available, err := availableKeys(settings, selector)
+	available, err := availableKeys(settings, selector, promptPassphrase)
 	if err != nil {
 		return err
 	}
@@ -65,9 +65,15 @@ func getAction(_ context.Context, cmd *cli.Command) error {
 }
 
 // loadIdentities collects the age identities available locally, from the
-// keyfile= setting or the default age identities file. An identity whose
-// recipient cannot be derived is skipped, like an unavailable GPG key.
-func loadIdentities(settings settings) ([]localIdentity, error) {
+// keyfile= setting or the default age identities file, asking prompt for the
+// passphrase of an identities file that holds its keys as age ciphertext.
+//
+// The age extension is one of the extensions redact may use, so an identities
+// file this extension cannot read is reported and skipped: redact keeps the
+// identities it could read, and is free to try the next extension. A passphrase
+// that was asked for and refused is the exception, because the user was spoken
+// to and no other extension can answer better.
+func loadIdentities(settings settings, prompt ageutil.PassphraseFunc) ([]localIdentity, error) {
 	filenames := settings.values("keyfile")
 	if len(filenames) == 0 {
 		if def := ageutil.DefaultIdentityFile(); def != "" {
@@ -76,28 +82,56 @@ func loadIdentities(settings settings) ([]localIdentity, error) {
 	}
 
 	identities := make([]localIdentity, 0)
+	locked := ""
 
 	for _, filename := range filenames {
-		parsed, err := ageutil.ParseIdentitiesFile(filename)
-		if err != nil {
-			return nil, failed(fmt.Errorf("loading age identities %s: %w", filename, err))
+		parsed, err := ageutil.ParseIdentitiesFile(filename, prompt)
+
+		switch {
+		case err == nil:
+		case errors.Is(err, ageutil.ErrIncorrectPassphrase), errors.Is(err, ageutil.ErrNoPassphraseEntered):
+			return nil, failed(fmt.Errorf("using age identities file %s: %w", filename, err))
+		case errors.Is(err, ageutil.ErrPassphraseUnavailable):
+			fmt.Fprintf(os.Stderr, "Ignoring age identities file %s: no terminal to type its passphrase. "+
+				"Run redact from a terminal, or use an identities file without a passphrase.\n", filename)
+			locked = filename
+
+			continue
+		default:
+			fmt.Fprintf(os.Stderr, "Ignoring age identities file %s: %v\n", filename, err)
+
+			continue
 		}
 
-		for _, identity := range parsed {
-			text, err := ageutil.RecipientString(identity)
-			if err != nil {
-				continue
-			}
+		identities = append(identities, identitiesOf(parsed)...)
+	}
 
-			identities = append(identities, localIdentity{identity: identity, text: text})
-		}
+	if locked != "" && len(identities) == 0 {
+		return nil, notApplicable(fmt.Errorf("age identities file %s: %w", locked, ageutil.ErrPassphraseUnavailable))
 	}
 
 	return identities, nil
 }
 
-func availableKeys(settings settings, selector string) ([]localIdentity, error) {
-	identities, err := loadIdentities(settings)
+// identitiesOf keeps the identities whose recipient can be derived. One whose
+// recipient cannot be derived is skipped, like an unavailable GPG key.
+func identitiesOf(parsed []age.Identity) []localIdentity {
+	identities := make([]localIdentity, 0, len(parsed))
+
+	for _, identity := range parsed {
+		text, err := ageutil.RecipientString(identity)
+		if err != nil {
+			continue
+		}
+
+		identities = append(identities, localIdentity{identity: identity, text: text})
+	}
+
+	return identities
+}
+
+func availableKeys(settings settings, selector string, prompt ageutil.PassphraseFunc) ([]localIdentity, error) {
+	identities, err := loadIdentities(settings, prompt)
 	if err != nil {
 		return nil, err
 	}

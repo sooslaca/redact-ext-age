@@ -41,6 +41,7 @@ linters:
             - $gostd
             - filippo.io/age
             - github.com/urfave/cli/v3
+            - golang.org/x/term
             - redact-ext-age
     funlen:
       lines: 70
