@@ -1,0 +1,76 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - errname
+    - errorlint
+    - funlen
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godox
+    - gosec
+    - lll
+    - misspell
+    - nakedret
+    - nilerr
+    - nlreturn
+    - prealloc
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - whitespace
+    - wsl_v5
+  settings:
+    depguard:
+      rules:
+        # This extension is independent of redact: it talks to it through the
+        # command line protocol and the Key Exchange files only. Keep it that
+        # way, so that a released redact can change its API without affecting
+        # this extension.
+        no-redact-dependency:
+          list-mode: strict
+          files:
+            - "$all"
+          allow:
+            - $gostd
+            - filippo.io/age
+            - github.com/urfave/cli/v3
+            - redact-ext-age
+    funlen:
+      lines: 70
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+    rules:
+    - path: '.+_test\.go'
+      linters:
+      - funlen
+      - goconst
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

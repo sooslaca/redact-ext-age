@@ -1,0 +1,40 @@
+[tools]
+grype = "latest"
+"golangci-lint" = "latest"
+goreleaser = "latest"
+"github:julian7/ihd" = "v0.2.1"
+
+[tasks.build]
+description = "Build the extension (default task)"
+alias = "default"
+quiet = true
+run = """
+    ver=$(ihd next)
+    go build -ldflags="-X main.version=$ver" .
+"""
+
+[tasks.watch]
+description = "Rebuild on source changes"
+sources = ["**/*.go", "go.mod", "go.sum"]
+watch = {}
+run = "mise run build"
+
+[tasks.test]
+description = "Run tests"
+run = "go test ./..."
+
+[tasks.lint]
+description = "Run linters"
+run = "golangci-lint run ./..."
+
+[tasks.check]
+description = "Run checks"
+run = [
+    "go test ./...",
+    "golangci-lint run ./...",
+    "grype file:go.mod",
+]
+
+[tasks.release]
+description = "Release version"
+run = "goreleaser release --clean"

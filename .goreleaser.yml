@@ -1,0 +1,39 @@
+version: 2
+archives:
+- files:
+  - README.md
+  - CHANGELOG.md
+  - LICENSE-BlueOak.md
+  - LICENSE-MIT.md
+  builds:
+  - redact-ext-age
+  format: tgz
+  format_overrides:
+  - goos: windows
+    format: zip
+  name_template: "{{.ProjectName}}-{{.Os}}-{{.Arch}}-{{.Version}}"
+builds:
+- id: redact-ext-age
+  env:
+  - CGO_ENABLED=0
+  ldflags:
+  - -s -w -X main.version={{.Version}}
+  main: .
+  targets:
+  - darwin_arm64
+  - darwin_amd64
+  - linux_amd64
+  - windows_amd64
+checksum:
+  name_template: 'SHA256SUMS.{{.ProjectName}}-{{.Version}}'
+project_name: redact-ext-age
+release:
+  github:
+    name: redact-ext-age
+    owner: sooslaca
+snapshot:
+  version_template: "{{ .Tag }}-{{ .ShortCommit }}"
+universal_binaries:
+- id: redact-ext-age
+  name_template: "redact-ext-age"
+  replace: true

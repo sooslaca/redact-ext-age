@@ -1,0 +1,2 @@
+kind_heading_template: "{kind}:"
+release_link_template: "https://github.com/sooslaca/redact-ext-age/releases/tag/{version}"
