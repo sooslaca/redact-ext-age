@@ -31,7 +31,7 @@ The extension keeps the age-encrypted Key Exchange collections in the Key Exchan
 
 The extension never uses the in-tree Key Exchange key: when no local age identity can unlock the collection, it reports that it is not applicable, and redact moves on to the other configured extensions.
 
-The private key is read from `keyfile=PATH`, from the `AGE_IDENTITIES_FILE` environment variable, or from the per-user age identities file, in this order. If several local identities can unlock the repository, `get` lists the candidate recipients on stderr, without printing the collection, and asks for a second invocation with `agekey=`.
+The private key is read from `keyfile=PATH`, from the `AGE_IDENTITIES_FILE` environment variable, or from the per-user age identities file `~/.config/age/identities`, in this order. The `.config` part is the directory `XDG_CONFIG_HOME` names when the environment sets one, and the macOS build reads the key from there too, not from the `~/Library/Application Support` folder Go names on that system, so a key written on one system is found on another. If several local identities can unlock the repository, `get` lists the candidate recipients on stderr, without printing the collection, and asks for a second invocation with `agekey=`.
 
 An identities file written by `age -p` or `age-keygen -p` keeps its private keys in an age container sealed with a passphrase. `get` asks for that passphrase on the controlling terminal, once per file, naming the file, and never on stdout, where redact reads the collection. What the user types is not repeated in a message.
 

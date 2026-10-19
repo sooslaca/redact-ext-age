@@ -167,14 +167,16 @@ func PrintRecipientTo(writer io.Writer, recipient string) error {
 
 // DefaultIdentityFile returns the path of the age identities file to read when
 // no keyfile= setting is supplied: the AGE_IDENTITIES_FILE environment
-// variable, or the per-user default. It returns an empty string when neither
-// can be determined.
+// variable, or the per-user default below the configuration directory of the
+// user, which is ~/.config on macOS too, and not the Application Support folder
+// os.UserConfigDir names there. It returns an empty string when neither can be
+// determined.
 func DefaultIdentityFile() string {
 	if env := os.Getenv("AGE_IDENTITIES_FILE"); env != "" {
 		return env
 	}
 
-	config, err := os.UserConfigDir()
+	config, err := userConfigDir()
 	if err != nil {
 		return ""
 	}

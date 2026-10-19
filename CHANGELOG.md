@@ -30,4 +30,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   version needs no migration: revoking a recipient removes the registration
   file that version left behind.
 
+### Fixed
+
+- Find the per-user identities file where it is kept on every system. Go's
+  configuration directory is `~/Library/Application Support` on macOS and takes
+  no note of `XDG_CONFIG_HOME` there, so the macOS build looked for
+  `age/identities` below that folder and missed a key kept under `~/.config`,
+  where the other builds read it. The macOS build now reads the rule the unixes
+  follow, `XDG_CONFIG_HOME` or `~/.config`, and refuses a relative
+  `XDG_CONFIG_HOME` as they do, so that a private key is not looked for
+  relative to the repository being unlocked. The `keyfile=` setting and the
+  `AGE_IDENTITIES_FILE` environment variable are read as before.
+
 [Unreleased]: https://github.com/sooslaca/redact-ext-age
